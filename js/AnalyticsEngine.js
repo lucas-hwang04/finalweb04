@@ -1,197 +1,165 @@
 /**
- * Analytics Engine Class
- * Calculates insights, trends, and statistics
+ * AnalyticsEngine Class
+ * Provides analytics, insights, and KPI calculations
  */
 class AnalyticsEngine {
-  /**
-   * Get KPIs for current month
-   */
-  static getMonthlyKPIs(transactions) {
+  constructor() {
+    this.categoryColors = [
+      '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6',
+      '#ec4899', '#22c55e', '#14b8a6', '#eab308', '#06b6d4'
+    ];
+  }
+
+  // Get current month date range
+  getCurrentMonthRange() {
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { start, end };
+  }
 
-    const thisMonth = transactions.filter(t => {
-      const txDate = new Date(t.date);
-      return txDate >= monthStart && txDate <= monthEnd;
-    });
+  // Get last 6 months
+  getLast6MonthsRange() {
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(new Date().getFullYear(), new Date().getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return months;
+  }
 
-    const income = thisMonth
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const expenses = thisMonth
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+  // Calculate KPIs for current month
+  calculateKPIs(transactions) {
+    const { start, end } = this.getCurrentMonthRange();
+    const thisMonth = transactions.filter(t => t.isWithinRange(start, end));
 
     const count = thisMonth.length;
-    const avgExpense = expenses > 0 ? expenses / thisMonth.filter(t => t.type === 'expense').length : 0;
+    const income = thisMonth.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const expenses = thisMonth.filter(t => t.type === 'expense');
+    const totalExpenses = expenses.reduce((s, t) => s + t.amount, 0);
+    const avgExpense = expenses.length ? totalExpenses / expenses.length : 0;
 
-    // Top category
-    const categorySpend = {};
-    thisMonth.filter(t => t.type === 'expense').forEach(t => {
-      categorySpend[t.category] = (categorySpend[t.category] || 0) + t.amount;
-    });
-
-    let topCategory = '—';
-    let topAmount = 0;
-    for (const [cat, amt] of Object.entries(categorySpend)) {
-      if (amt > topAmount) {
-        topAmount = amt;
-        topCategory = cat;
+    // Top expense category
+    const byCat = new Map();
+    for (const t of expenses) {
+      byCat.set(t.category, (byCat.get(t.category) || 0) + t.amount);
+    }
+    let topCat = '—';
+    let topVal = 0;
+    for (const [cat, val] of byCat) {
+      if (val > topVal) {
+        topVal = val;
+        topCat = cat;
       }
     }
 
     return {
-      income,
-      expenses,
-      balance: income - expenses,
       transactionCount: count,
-      topCategory,
-      avgExpense,
+      income: income,
+      totalExpenses: totalExpenses,
+      balance: income - totalExpenses,
+      avgExpense: avgExpense,
+      topCategory: topCat,
+      topCategoryAmount: topVal
     };
   }
 
-  /**
-   * Get category breakdown for a time range
-   */
-  static getCategoryBreakdown(transactions, startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  // Get spending by category for current month
+  getSpendingByCategory(transactions) {
+    const { start, end } = this.getCurrentMonthRange();
+    const expenses = transactions.filter(t => 
+      t.type === 'expense' && t.isWithinRange(start, end)
+    );
 
-    const breakdown = {};
-    transactions
-      .filter(t => {
-        const txDate = new Date(t.date);
-        return t.type === 'expense' && txDate >= start && txDate <= end;
-      })
-      .forEach(t => {
-        breakdown[t.category] = (breakdown[t.category] || 0) + t.amount;
-      });
-
-    return Object.entries(breakdown)
-      .map(([category, amount]) => ({ category, amount }))
-      .sort((a, b) => b.amount - a.amount);
-  }
-
-  /**
-   * Get monthly trend (last 12 months)
-   */
-  static getMonthlySeries(transactions) {
-    const now = new Date();
-    const months = [];
-
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months.push(key);
+    const byCat = new Map();
+    for (const t of expenses) {
+      byCat.set(t.category, (byCat.get(t.category) || 0) + t.amount);
     }
 
+    const labels = Array.from(byCat.keys());
+    const values = labels.map(l => byCat.get(l));
+
+    return { labels, values };
+  }
+
+  // Get income and expenses by month (last 6 months)
+  getMonthlyTrend(transactions) {
+    const months = this.getLast6MonthsRange();
     const incomeMap = new Map(months.map(m => [m, 0]));
     const expenseMap = new Map(months.map(m => [m, 0]));
 
-    transactions.forEach(t => {
-      const key = t.date.slice(0, 7); // YYYY-MM
-      if (incomeMap.has(key)) {
-        if (t.type === 'income') {
-          incomeMap.set(key, incomeMap.get(key) + t.amount);
-        } else {
-          expenseMap.set(key, expenseMap.get(key) + t.amount);
-        }
+    for (const t of transactions) {
+      const key = t.getMonthKey();
+      if (!incomeMap.has(key)) continue;
+      if (t.type === 'income') {
+        incomeMap.set(key, incomeMap.get(key) + t.amount);
+      } else if (t.type === 'expense') {
+        expenseMap.set(key, expenseMap.get(key) + t.amount);
       }
-    });
+    }
 
     return {
       labels: months,
       income: months.map(m => incomeMap.get(m)),
-      expenses: months.map(m => expenseMap.get(m)),
+      expenses: months.map(m => expenseMap.get(m))
     };
   }
 
-  /**
-   * Get weekly trend (last 8 weeks)
-   */
-  static getWeeklySeries(transactions) {
-    const weeks = [];
-    for (let i = 7; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - d.getDay() - i * 7);
-      const key = d.toISOString().split('T')[0];
-      weeks.push(key);
+  // Generate AI-like insights
+  generateInsights(transactions, budgets) {
+    const insights = [];
+    const { start, end } = this.getCurrentMonthRange();
+    const kpis = this.calculateKPIs(transactions);
+
+    // Insight 1: Spending trend
+    if (kpis.totalExpenses > kpis.income) {
+      insights.push({
+        type: 'warning',
+        title: 'Spending Alert',
+        message: `You're spending $${(kpis.totalExpenses - kpis.income).toFixed(2)} more than you're earning this month.`,
+        icon: '⚠️'
+      });
     }
 
-    const incomeMap = new Map(weeks.map(w => [w, 0]));
-    const expenseMap = new Map(weeks.map(w => [w, 0]));
-
-    transactions.forEach(t => {
-      const d = new Date(t.date);
-      const weekStart = new Date(d);
-      weekStart.setDate(d.getDate() - d.getDay());
-      const key = weekStart.toISOString().split('T')[0];
-
-      if (incomeMap.has(key)) {
-        if (t.type === 'income') {
-          incomeMap.set(key, incomeMap.get(key) + t.amount);
-        } else {
-          expenseMap.set(key, expenseMap.get(key) + t.amount);
-        }
-      }
-    });
-
-    return {
-      labels: weeks.map(w => new Date(w).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
-      income: weeks.map(w => incomeMap.get(w)),
-      expenses: weeks.map(w => expenseMap.get(w)),
-    };
-  }
-
-  /**
-   * AI-simulated recommendations based on spending patterns
-   */
-  static getRecommendations(transactions, budgetManager) {
-    const kpis = this.getMonthlyKPIs(transactions);
-    const recommendations = [];
-
-    // Recommendation 1: High spending category
-    if (kpis.topCategory && kpis.topCategory !== '—') {
-      const budget = budgetManager.getBudget(kpis.topCategory);
-      if (budget > 0 && kpis.topCategory === 'Shopping') {
-        recommendations.push({
-          type: 'savings',
-          icon: '💡',
-          title: 'Optimize Shopping Spending',
-          message: `Your top category is ${kpis.topCategory}. Consider setting a budget or finding discounts.`,
+    // Insight 2: Top category warning
+    if (kpis.topCategory !== '—') {
+      const topBudget = budgets[kpis.topCategory] || 0;
+      if (kpis.topCategoryAmount > topBudget) {
+        insights.push({
+          type: 'warning',
+          title: `${kpis.topCategory} Overspend`,
+          message: `${kpis.topCategory} has exceeded its budget by $${(kpis.topCategoryAmount - topBudget).toFixed(2)}.`,
+          icon: '📊'
         });
       }
     }
 
-    // Recommendation 2: Good income-to-expense ratio
-    if (kpis.balance > 0) {
-      recommendations.push({
-        type: 'positive',
-        icon: '✨',
-        title: 'Great Job!',
-        message: `You have a positive balance of $${kpis.balance.toFixed(2)} this month. Keep it up!`,
-      });
-    } else if (kpis.balance < 0) {
-      recommendations.push({
-        type: 'warning',
-        icon: '⚠️',
-        title: 'Expenses Exceed Income',
-        message: `Consider increasing income or reducing expenses to balance your budget.`,
+    // Insight 3: Savings opportunity
+    if (kpis.avgExpense > 0) {
+      const potentialSavings = (kpis.avgExpense * 0.1).toFixed(2);
+      insights.push({
+        type: 'success',
+        title: 'Savings Opportunity',
+        message: `If you reduce average expense by 10%, you could save ~$${potentialSavings} this month.`,
+        icon: '💰'
       });
     }
 
-    // Recommendation 3: Transaction frequency
-    if (kpis.transactionCount > 20) {
-      recommendations.push({
+    // Insight 4: No spending warning
+    if (kpis.totalExpenses === 0 && kpis.income > 0) {
+      insights.push({
         type: 'info',
-        icon: '📊',
-        title: 'High Transaction Volume',
-        message: `You have ${kpis.transactionCount} transactions this month. Monitor for unusual patterns.`,
+        title: 'Great Start',
+        message: 'You haven\'t recorded any expenses yet this month. Keep up the good financial tracking!',
+        icon: '✨'
       });
     }
 
-    return recommendations;
+    return insights;
+  }
+
+  // Get color for a category
+  getCategoryColor(categoryIndex) {
+    return this.categoryColors[categoryIndex % this.categoryColors.length];
   }
 }

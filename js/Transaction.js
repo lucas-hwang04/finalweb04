@@ -1,41 +1,36 @@
 /**
- * Transaction Model Class
- * Represents a single income/expense transaction
+ * Transaction Class
+ * Represents a single income or expense transaction
  */
 class Transaction {
-  constructor(data = {}) {
-    this.id = data.id || `tx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    this.type = data.type || 'expense'; // 'income' or 'expense'
-    this.category = data.category || '';
-    this.amount = parseFloat(data.amount) || 0;
-    this.date = data.date || new Date().toISOString().split('T')[0];
-    this.note = data.note || '';
-    this.tags = data.tags || [];
+  constructor(type, category, amount, date, note = '', id = null) {
+    this.id = id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.type = type; // 'income' or 'expense'
+    this.category = category;
+    this.amount = parseFloat(amount) || 0;
+    this.date = date;
+    this.note = note;
+    this.createdAt = new Date().toISOString();
   }
 
-  /**
-   * Validate transaction before saving
-   */
-  validate() {
-    const errors = [];
-    if (!this.type || !['income', 'expense'].includes(this.type)) {
-      errors.push('Type must be income or expense');
-    }
-    if (!this.category || this.category.trim() === '') {
-      errors.push('Category is required');
-    }
-    if (!isFinite(this.amount) || this.amount <= 0) {
-      errors.push('Amount must be a positive number');
-    }
-    if (!this.date || !/^\d{4}-\d{2}-\d{2}$/.test(this.date)) {
-      errors.push('Date must be in YYYY-MM-DD format');
-    }
-    return { valid: errors.length === 0, errors };
+  // Return formatted money string
+  formatAmount() {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(this.amount);
   }
 
-  /**
-   * Return transaction as plain object
-   */
+  // Check if transaction is within a date range
+  isWithinRange(startDate, endDate) {
+    const txDate = new Date(this.date);
+    return txDate >= startDate && txDate <= endDate;
+  }
+
+  // Get month-year key for grouping
+  getMonthKey() {
+    const d = new Date(this.date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  // Convert to JSON
   toJSON() {
     return {
       id: this.id,
@@ -44,21 +39,14 @@ class Transaction {
       amount: this.amount,
       date: this.date,
       note: this.note,
-      tags: this.tags,
+      createdAt: this.createdAt
     };
   }
 
-  /**
-   * Create transaction from JSON
-   */
-  static fromJSON(obj) {
-    return new Transaction(obj);
-  }
-
-  /**
-   * Get display string
-   */
-  getDisplayString() {
-    return `${this.note || this.category} - ${this.type === 'income' ? '+' : '-'}$${this.amount.toFixed(2)}`;
+  // Create from JSON
+  static fromJSON(data) {
+    const tx = new Transaction(data.type, data.category, data.amount, data.date, data.note, data.id);
+    tx.createdAt = data.createdAt || tx.createdAt;
+    return tx;
   }
 }

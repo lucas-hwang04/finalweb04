@@ -1,95 +1,135 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Expense Tracker - AI-Powered Finance Management</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expense Tracker - OOP Architecture</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar (Desktop) -->
+    <!-- Sidebar Navigation (Desktop) -->
     <aside class="sidebar">
-      <div class="logo">
-        <h1>💰 ExpenseTrack</h1>
+      <div class="sidebar-header">
+        <h1 class="sidebar-title">💰 Expense Tracker</h1>
       </div>
-      <nav class="nav">
-        <button class="nav-btn active" data-tab="dashboard">
-          <span class="icon">📊</span>
-          <span class="label">Dashboard</span>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-nav="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
         </button>
-        <button class="nav-btn" data-tab="add-expense">
-          <span class="icon">➕</span>
-          <span class="label">Add Transaction</span>
+        <button class="nav-item" data-nav="add-expense">
+          <span class="nav-icon">➕</span>
+          <span class="nav-label">Add Expense</span>
         </button>
-        <button class="nav-btn" data-tab="analytics">
-          <span class="icon">📈</span>
-          <span class="label">Analytics</span>
+        <button class="nav-item" data-nav="analytics">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Analytics</span>
         </button>
-        <button class="nav-btn" data-tab="search">
-          <span class="icon">🔍</span>
-          <span class="label">Search</span>
+        <button class="nav-item" data-nav="search">
+          <span class="nav-icon">🔍</span>
+          <span class="nav-label">Search</span>
         </button>
-        <button class="nav-btn" data-tab="settings">
-          <span class="icon">⚙️</span>
-          <span class="label">Settings</span>
+        <button class="nav-item" data-nav="settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
         </button>
       </nav>
+      <footer class="sidebar-footer">
+        <small>Data stored in localStorage</small>
+      </footer>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
       <!-- Dashboard Screen -->
-      <section id="screen-dashboard" class="screen" style="display: none;"></section>
+      <div data-screen="dashboard" style="display: none;">
+        <div class="container">
+          <header class="content-header">
+            <h1>📊 Dashboard</h1>
+            <p>Your financial overview</p>
+          </header>
+          <!-- Content rendered by DashboardScreen -->
+        </div>
+      </div>
 
       <!-- Add Expense Screen -->
-      <section id="screen-add-expense" class="screen" style="display: none;"></section>
+      <div data-screen="add-expense" style="display: none;">
+        <div class="container">
+          <header class="content-header">
+            <h1>➕ Add Transaction</h1>
+            <p>Record new income or expense</p>
+          </header>
+          <!-- Content rendered by AddExpenseScreen -->
+        </div>
+      </div>
 
       <!-- Analytics Screen -->
-      <section id="screen-analytics" class="screen" style="display: none;"></section>
+      <div data-screen="analytics" style="display: none;">
+        <div class="container">
+          <header class="content-header">
+            <h1>📈 Analytics</h1>
+            <p>Detailed spending analysis</p>
+          </header>
+          <!-- Content rendered by AnalyticsScreen -->
+        </div>
+      </div>
 
       <!-- Search Screen -->
-      <section id="screen-search" class="screen" style="display: none;"></section>
+      <div data-screen="search" style="display: none;">
+        <div class="container">
+          <header class="content-header">
+            <h1>🔍 Search & Filter</h1>
+            <p>Find your transactions</p>
+          </header>
+          <!-- Content rendered by SearchScreen -->
+        </div>
+      </div>
 
       <!-- Settings Screen -->
-      <section id="screen-settings" class="screen" style="display: none;"></section>
+      <div data-screen="settings" style="display: none;">
+        <div class="container">
+          <header class="content-header">
+            <h1>⚙️ Settings</h1>
+            <p>Manage your preferences</p>
+          </header>
+          <!-- Content rendered by SettingsScreen -->
+        </div>
+      </div>
     </main>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-tab="dashboard">📊</button>
-      <button class="nav-btn" data-tab="add-expense">➕</button>
-      <button class="nav-btn" data-tab="analytics">📈</button>
-      <button class="nav-btn" data-tab="search">🔍</button>
-      <button class="nav-btn" data-tab="settings">⚙️</button>
-    </nav>
   </div>
 
-  <!-- Toast Notifications Container -->
-  <div id="toastContainer"></div>
+  <!-- Bottom Navigation (Mobile) -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-nav="dashboard">
+      <span class="nav-icon">📊</span>
+    </button>
+    <button class="nav-item" data-nav="add-expense">
+      <span class="nav-icon">➕</span>
+    </button>
+    <button class="nav-item" data-nav="analytics">
+      <span class="nav-icon">📈</span>
+    </button>
+    <button class="nav-item" data-nav="search">
+      <span class="nav-icon">🔍</span>
+    </button>
+    <button class="nav-item" data-nav="settings">
+      <span class="nav-icon">⚙️</span>
+    </button>
+  </nav>
 
-  <!-- Scripts: Load all modules -->
-  <!-- Core Models -->
-  <script src="js/Transaction.js"></script>
-  <script src="js/Storage.js"></script>
-  <script src="js/BudgetManager.js"></script>
-  <script src="js/AnalyticsEngine.js"></script>
-
-  <!-- UI Management -->
-  <script src="js/UIManager.js"></script>
-
-  <!-- Screen Modules -->
-  <script src="js/DashboardScreen.js"></script>
-  <script src="js/AddExpenseScreen.js"></script>
-  <script src="js/AnalyticsScreen.js"></script>
-  <script src="js/SearchScreen.js"></script>
-  <script src="js/SettingsScreen.js"></script>
-
-  <!-- App Orchestrator -->
-  <script src="js/App.js"></script>
-
-  <!-- Third-party Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <!-- Script order matters: load classes first, then App -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" defer></script>
+  <script src="js/Transaction.js" defer></script>
+  <script src="js/Storage.js" defer></script>
+  <script src="js/UIManager.js" defer></script>
+  <script src="js/AnalyticsEngine.js" defer></script>
+  <script src="js/BudgetManager.js" defer></script>
+  <script src="js/DashboardScreen.js" defer></script>
+  <script src="js/AddExpenseScreen.js" defer></script>
+  <script src="js/AnalyticsScreen.js" defer></script>
+  <script src="js/SearchScreen.js" defer></script>
+  <script src="js/SettingsScreen.js" defer></script>
+  <script src="js/App.js" defer></script>
 </body>
 </html>

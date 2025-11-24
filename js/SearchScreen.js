@@ -1,279 +1,246 @@
 /**
  * SearchScreen Class
- * Search and advanced filtering with NLP-simulated suggestions
+ * Provides search, filtering, and advanced query capabilities
  */
 class SearchScreen {
-  constructor(ui, storage) {
+  constructor(ui) {
     this.ui = ui;
-    this.storage = storage;
     this.filters = {
-      query: '',
-      category: '',
-      minAmount: 0,
-      maxAmount: Infinity,
-      startDate: '',
-      endDate: '',
-      type: '',
+      category: null,
+      startDate: null,
+      endDate: null,
+      minAmount: null,
+      maxAmount: null,
+      type: null
     };
+    this.searchQuery = '';
   }
 
-  /**
-   * Render search screen
-   */
+  // Render the search screen
   render(transactions) {
-    const container = this.ui.$('#screen-search');
+    const container = this.ui.$('[data-screen="search"]');
     if (!container) return;
 
-    const filtered = this.filterTransactions(transactions);
-
-    const categories = [...new Set(transactions.map(t => t.category))].sort();
-    const types = ['income', 'expense'];
+    const filteredResults = this.applyFilters(transactions);
 
     let html = `
-      <div class="search-header">
-        <h2>Search & Filter</h2>
-        <p class="subtitle">Find transactions with advanced filters</p>
-      </div>
+      <div class="search-content">
+        <!-- Search Bar -->
+        <section class="card">
+          <h2 class="card-title">🔍 Search & Filter</h2>
+          <input 
+            type="text" 
+            id="search-input" 
+            class="search-input" 
+            placeholder="Search transactions by note or category..."
+          />
+        </section>
 
-      <!-- Search Bar -->
-      <div class="search-bar">
-        <input type="text" id="searchInput" class="search-input" placeholder="Search by note or description..." value="${this.filters.query}">
-      </div>
-
-      <!-- Quick Filter Buttons -->
-      <div class="quick-filters">
-        <button class="quick-btn ${this.filters.type === '' ? 'active' : ''}" data-type="">All</button>
-        <button class="quick-btn ${this.filters.type === 'income' ? 'active' : ''}" data-type="income">📈 Income</button>
-        <button class="quick-btn ${this.filters.type === 'expense' ? 'active' : ''}" data-type="expense">📉 Expense</button>
-      </div>
-
-      <!-- Advanced Filters -->
-      <div class="filters-section">
-        <h3>Advanced Filters</h3>
-        <div class="filter-grid">
-          <div class="filter-group">
-            <label>Category</label>
-            <select id="filterCategory">
-              <option value="">All Categories</option>
-    `;
-
-    for (const cat of categories) {
-      html += `<option value="${cat}" ${this.filters.category === cat ? 'selected' : ''}>${cat}</option>`;
-    }
-
-    html += `
-            </select>
+        <!-- Quick Filter Buttons -->
+        <section class="card">
+          <div class="quick-filters">
+            <button class="quick-filter-btn active" data-type="all">All Transactions</button>
+            <button class="quick-filter-btn" data-type="income">💰 Income</button>
+            <button class="quick-filter-btn" data-type="expense">💸 Expenses</button>
           </div>
+        </section>
 
-          <div class="filter-group">
-            <label>Min Amount</label>
-            <input type="number" id="filterMinAmount" placeholder="0" value="${this.filters.minAmount === 0 ? '' : this.filters.minAmount}">
-          </div>
-
-          <div class="filter-group">
-            <label>Max Amount</label>
-            <input type="number" id="filterMaxAmount" placeholder="999999" value="${this.filters.maxAmount === Infinity ? '' : this.filters.maxAmount}">
-          </div>
-
-          <div class="filter-group">
-            <label>Start Date</label>
-            <input type="date" id="filterStartDate" value="${this.filters.startDate}">
-          </div>
-
-          <div class="filter-group">
-            <label>End Date</label>
-            <input type="date" id="filterEndDate" value="${this.filters.endDate}">
-          </div>
-        </div>
-
-        <div class="filter-actions">
-          <button class="btn btn-primary" id="applyFilters">Apply Filters</button>
-          <button class="btn" id="clearFilters">Clear All</button>
-        </div>
-      </div>
-
-      <!-- Active Filters Display -->
-      <div id="activeFilters" class="active-filters" style="display: ${this.hasActiveFilters() ? 'block' : 'none'}">
-        <div class="filters-label">Active Filters:</div>
-        <div id="filterBadges" class="filter-badges"></div>
-      </div>
-
-      <!-- Results -->
-      <div class="results-section">
-        <div class="results-header">
-          <h3>Results</h3>
-          <span class="result-count">${filtered.length} ${filtered.length === 1 ? 'transaction' : 'transactions'}</span>
-        </div>
-    `;
-
-    if (filtered.length > 0) {
-      const total = filtered.reduce((sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount), 0);
-      html += `<div class="results-total">Total: <strong>${this.ui.formatMoney(total)}</strong></div>`;
-
-      html += `<div class="results-list">`;
-      for (const tx of filtered) {
-        const sign = tx.type === 'income' ? '+' : '-';
-        const amountClass = tx.type === 'income' ? 'positive' : 'negative';
-        html += `
-          <div class="result-item">
-            <div class="result-left">
-              <div class="result-note">${tx.note || 'No description'}</div>
-              <div class="result-meta">${tx.category} • ${this.ui.formatDate(tx.date)}</div>
+        <!-- Advanced Filters -->
+        <section class="card span-2">
+          <h3 class="filter-title">⚙️ Advanced Filters</h3>
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label>Category</label>
+              <select id="filter-category">
+                <option value="">All Categories</option>
+                ${[...new Set(transactions.map(t => t.category))].map(c => 
+                  `<option value="${c}">${c}</option>`
+                ).join('')}
+              </select>
             </div>
-            <div class="result-right">
-              <div class="result-amount ${amountClass}">${sign}${this.ui.formatMoney(Math.abs(tx.amount))}</div>
-              <div class="result-type">${tx.type}</div>
+
+            <div class="filter-group">
+              <label>Start Date</label>
+              <input type="date" id="filter-start-date" />
+            </div>
+
+            <div class="filter-group">
+              <label>End Date</label>
+              <input type="date" id="filter-end-date" />
+            </div>
+
+            <div class="filter-group">
+              <label>Min Amount ($)</label>
+              <input type="number" id="filter-min-amount" step="0.01" min="0" />
+            </div>
+
+            <div class="filter-group">
+              <label>Max Amount ($)</label>
+              <input type="number" id="filter-max-amount" step="0.01" min="0" />
+            </div>
+
+            <div class="filter-group">
+              <label>&nbsp;</label>
+              <button class="btn btn-secondary" id="clear-filters">Clear Filters</button>
             </div>
           </div>
-        `;
-      }
-      html += `</div>`;
-    } else {
-      html += `<div class="empty-state">No transactions match your filters.</div>`;
-    }
+        </section>
 
-    html += `
+        <!-- Active Filters Display -->
+        ${Object.values(this.filters).some(f => f !== null) ? `
+          <section class="card">
+            <div class="active-filters">
+              ${this.filters.category ? `<span class="filter-badge">${this.filters.category} <button onclick="event.stopPropagation()">×</button></span>` : ''}
+              ${this.filters.type ? `<span class="filter-badge">${this.filters.type} <button onclick="event.stopPropagation()">×</button></span>` : ''}
+              ${this.filters.startDate ? `<span class="filter-badge">From ${this.filters.startDate} <button onclick="event.stopPropagation()">×</button></span>` : ''}
+              ${this.filters.endDate ? `<span class="filter-badge">To ${this.filters.endDate} <button onclick="event.stopPropagation()">×</button></span>` : ''}
+            </div>
+          </section>
+        ` : ''}
+
+        <!-- Search Results -->
+        <section class="card span-2">
+          <h3 class="results-title">
+            🔎 Results <span class="results-count">(${filteredResults.length} found, ${filteredResults.reduce((sum, t) => sum + t.amount, 0).toLocaleString('en-US', {style: 'currency', currency: 'USD'})} total)</span>
+          </h3>
+          ${filteredResults.length > 0 ? `
+            <ul class="transaction-list">
+              ${filteredResults.map(tx => `
+                <li class="transaction-item">
+                  <div class="tx-info">
+                    <div class="tx-title">${tx.note || tx.category}</div>
+                    <div class="tx-meta">${tx.category} • ${this.ui.formatDate(tx.date)} • ${tx.type}</div>
+                  </div>
+                  <div class="tx-actions">
+                    <div class="tx-amount" style="color: ${tx.type === 'income' ? '#22c55e' : '#ef4444'};">
+                      ${tx.type === 'income' ? '+' : '-'}${this.ui.formatMoney(tx.amount)}
+                    </div>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          ` : '<p class="empty-state">No transactions found matching your search</p>'}
+        </section>
       </div>
     `;
 
     container.innerHTML = html;
-    this.attachEventListeners();
-    this.renderFilterBadges();
+    this.attachEventListeners(transactions);
   }
 
-  /**
-   * Filter transactions based on current filters
-   */
-  filterTransactions(transactions) {
-    return transactions.filter(t => {
-      // Text search
-      if (this.filters.query) {
-        const query = this.filters.query.toLowerCase();
-        const match =
-          (t.note && t.note.toLowerCase().includes(query)) ||
-          (t.category && t.category.toLowerCase().includes(query));
-        if (!match) return false;
-      }
-
-      // Category filter
-      if (this.filters.category && t.category !== this.filters.category) {
-        return false;
-      }
-
-      // Amount filters
-      if (t.amount < this.filters.minAmount || t.amount > this.filters.maxAmount) {
-        return false;
-      }
-
-      // Date filters
-      if (this.filters.startDate && t.date < this.filters.startDate) {
-        return false;
-      }
-      if (this.filters.endDate && t.date > this.filters.endDate) {
-        return false;
-      }
-
-      // Type filter
-      if (this.filters.type && t.type !== this.filters.type) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  /**
-   * Check if any filters are active
-   */
-  hasActiveFilters() {
-    return (
-      this.filters.query ||
-      this.filters.category ||
-      this.filters.minAmount > 0 ||
-      this.filters.maxAmount < Infinity ||
-      this.filters.startDate ||
-      this.filters.endDate ||
-      this.filters.type
-    );
-  }
-
-  /**
-   * Render active filter badges
-   */
-  renderFilterBadges() {
-    const badgesContainer = this.ui.$('#filterBadges');
-    if (!badgesContainer) return;
-
-    const badges = [];
-    if (this.filters.query) badges.push(`Search: "${this.filters.query}"`);
-    if (this.filters.category) badges.push(`Category: ${this.filters.category}`);
-    if (this.filters.minAmount > 0) badges.push(`Min: ${this.ui.formatMoney(this.filters.minAmount)}`);
-    if (this.filters.maxAmount < Infinity) badges.push(`Max: ${this.ui.formatMoney(this.filters.maxAmount)}`);
-    if (this.filters.startDate) badges.push(`From: ${this.ui.formatDate(this.filters.startDate)}`);
-    if (this.filters.endDate) badges.push(`To: ${this.ui.formatDate(this.filters.endDate)}`);
-    if (this.filters.type) badges.push(`Type: ${this.filters.type}`);
-
-    badgesContainer.innerHTML = badges.map(b => `<span class="filter-badge">${b}</span>`).join('');
-  }
-
-  /**
-   * Attach event listeners
-   */
-  attachEventListeners() {
-    const searchInput = this.ui.$('#searchInput');
-    const filterBtns = this.ui.$$('.quick-btn');
-    const applyBtn = this.ui.$('#applyFilters');
-    const clearBtn = this.ui.$('#clearFilters');
-
-    // Real-time search
-    searchInput?.addEventListener('input', e => {
-      this.filters.query = e.target.value;
-      const transactions = this.storage.loadTransactions();
-      this.render(transactions);
-    });
-
-    // Quick filter buttons
-    for (const btn of filterBtns) {
-      btn.addEventListener('click', e => {
-        this.filters.type = e.target.dataset.type;
-        const transactions = this.storage.loadTransactions();
+  // Attach event listeners
+  attachEventListeners(transactions) {
+    // Search input
+    const searchInput = this.ui.$('#search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        this.searchQuery = e.target.value.toLowerCase();
         this.render(transactions);
       });
     }
 
-    // Apply advanced filters
-    applyBtn?.addEventListener('click', () => {
-      this.filters.category = this.ui.$('#filterCategory').value;
-      this.filters.minAmount = parseFloat(this.ui.$('#filterMinAmount').value) || 0;
-      this.filters.maxAmount = parseFloat(this.ui.$('#filterMaxAmount').value) || Infinity;
-      this.filters.startDate = this.ui.$('#filterStartDate').value;
-      this.filters.endDate = this.ui.$('#filterEndDate').value;
+    // Quick filter buttons
+    this.ui.$$('[data-type]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        this.ui.$$('[data-type]').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        const type = e.target.dataset.type;
+        this.filters.type = type === 'all' ? null : type;
+        this.render(transactions);
+      });
+    });
 
-      const transactions = this.storage.loadTransactions();
+    // Advanced filters
+    const categoryFilter = this.ui.$('#filter-category');
+    const startDateFilter = this.ui.$('#filter-start-date');
+    const endDateFilter = this.ui.$('#filter-end-date');
+    const minAmountFilter = this.ui.$('#filter-min-amount');
+    const maxAmountFilter = this.ui.$('#filter-max-amount');
+    const clearBtn = this.ui.$('#clear-filters');
+
+    if (categoryFilter) categoryFilter.addEventListener('change', (e) => {
+      this.filters.category = e.target.value || null;
       this.render(transactions);
     });
 
-    // Clear filters
-    clearBtn?.addEventListener('click', () => {
-      this.filters = {
-        query: '',
-        category: '',
-        minAmount: 0,
-        maxAmount: Infinity,
-        startDate: '',
-        endDate: '',
-        type: '',
-      };
-      const transactions = this.storage.loadTransactions();
+    if (startDateFilter) startDateFilter.addEventListener('change', (e) => {
+      this.filters.startDate = e.target.value || null;
       this.render(transactions);
     });
+
+    if (endDateFilter) endDateFilter.addEventListener('change', (e) => {
+      this.filters.endDate = e.target.value || null;
+      this.render(transactions);
+    });
+
+    if (minAmountFilter) minAmountFilter.addEventListener('change', (e) => {
+      this.filters.minAmount = e.target.value ? parseFloat(e.target.value) : null;
+      this.render(transactions);
+    });
+
+    if (maxAmountFilter) maxAmountFilter.addEventListener('change', (e) => {
+      this.filters.maxAmount = e.target.value ? parseFloat(e.target.value) : null;
+      this.render(transactions);
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.filters = {
+          category: null,
+          startDate: null,
+          endDate: null,
+          minAmount: null,
+          maxAmount: null,
+          type: null
+        };
+        this.searchQuery = '';
+        this.render(transactions);
+      });
+    }
   }
 
-  /**
-   * Called when screen is shown
-   */
-  onShow() {
-    const transactions = this.storage.loadTransactions();
-    this.render(transactions);
+  // Apply filters to transactions
+  applyFilters(transactions) {
+    let results = transactions.slice();
+
+    // Search query
+    if (this.searchQuery) {
+      results = results.filter(t =>
+        (t.note && t.note.toLowerCase().includes(this.searchQuery)) ||
+        (t.category && t.category.toLowerCase().includes(this.searchQuery))
+      );
+    }
+
+    // Type filter
+    if (this.filters.type) {
+      results = results.filter(t => t.type === this.filters.type);
+    }
+
+    // Category filter
+    if (this.filters.category) {
+      results = results.filter(t => t.category === this.filters.category);
+    }
+
+    // Date range filter
+    if (this.filters.startDate) {
+      const startDate = new Date(this.filters.startDate);
+      results = results.filter(t => new Date(t.date) >= startDate);
+    }
+
+    if (this.filters.endDate) {
+      const endDate = new Date(this.filters.endDate);
+      results = results.filter(t => new Date(t.date) <= endDate);
+    }
+
+    // Amount range filter
+    if (this.filters.minAmount !== null) {
+      results = results.filter(t => t.amount >= this.filters.minAmount);
+    }
+
+    if (this.filters.maxAmount !== null) {
+      results = results.filter(t => t.amount <= this.filters.maxAmount);
+    }
+
+    return results.sort((a, b) => new Date(b.date) - new Date(a.date));
   }
 }

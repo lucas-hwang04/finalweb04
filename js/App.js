@@ -1,109 +1,133 @@
 /**
  * App Class
- * Main orchestrator that initializes all components and manages the application lifecycle
+ * Main orchestrator that ties all components together
  */
 class App {
   constructor() {
+    // Initialize core systems
     this.ui = new UIManager();
     this.storage = new Storage();
     this.budgetManager = new BudgetManager(this.storage);
-    this.analyticsEngine = AnalyticsEngine;
+    this.analytics = new AnalyticsEngine();
 
-    this.screens = {};
-    this.initScreens();
-    this.setupEventListeners();
-    this.init();
+    // Initialize screen managers
+    this.dashboardScreen = new DashboardScreen(this.ui, this.storage, this.budgetManager, this.analytics);
+    this.addExpenseScreen = new AddExpenseScreen(this.ui, this.storage);
+    this.analyticsScreen = new AnalyticsScreen(this.ui, this.analytics);
+    this.searchScreen = new SearchScreen(this.ui);
+    this.settingsScreen = new SettingsScreen(this.ui, this.storage, this.budgetManager);
+
+    // Load data
+    this.transactions = this.storage.loadTransactions();
+
+    // Inject styles
+    UIManager.injectAnimations();
   }
 
-  /**
-   * Initialize all screen modules
-   */
-  initScreens() {
-    this.screens.dashboard = new DashboardScreen(
-      this.ui,
-      this.storage,
-      this.budgetManager,
-      this.analyticsEngine
-    );
+  // Initialize the app
+  init() {
+    console.log('🚀 Initializing Expense Tracker App...');
 
-    this.screens['add-expense'] = new AddExpenseScreen(
-      this.ui,
-      this.storage,
-      () => this.refreshAllScreens()
-    );
+    // Render all screens for the first time
+    this.renderAll();
 
-    this.screens.analytics = new AnalyticsScreen(
-      this.ui,
-      this.storage,
-      this.analyticsEngine,
-      this.budgetManager
-    );
+    // Show dashboard by default
+    this.ui.showScreen('dashboard');
 
-    this.screens.search = new SearchScreen(this.ui, this.storage);
+    // Attach event listeners
+    this.attachEventListeners();
 
-    this.screens.settings = new SettingsScreen(
-      this.ui,
-      this.storage,
-      this.budgetManager
-    );
-
-    // Register screens with UIManager
-    for (const [name, screen] of Object.entries(this.screens)) {
-      this.ui.registerScreen(name, screen);
-    }
+    console.log('✅ App initialized successfully');
   }
 
-  /**
-   * Setup navigation and event listeners
-   */
-  setupEventListeners() {
-    const navBtns = this.ui.$$('.nav-btn');
-    for (const btn of navBtns) {
+  // Render all screens with current data
+  renderAll() {
+    this.dashboardScreen.render(this.transactions);
+    this.addExpenseScreen.render(this.transactions);
+    this.analyticsScreen.render(this.transactions);
+    this.searchScreen.render(this.transactions);
+    this.settingsScreen.render(this.transactions);
+  }
+
+  // Attach global event listeners
+  attachEventListeners() {
+    // Navigation buttons
+    this.ui.$$('[data-nav]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        this.ui.switchTab(tab);
+        const screenId = btn.dataset.nav;
+        this.ui.showScreen(screenId);
       });
-    }
+    });
 
-    // Edit transaction listeners (when user clicks edit on a transaction)
-    document.addEventListener('click', e => {
-      if (e.target.classList.contains('edit-tx-btn')) {
-        const txId = e.target.dataset.txId;
-        this.screens['add-expense'].editTransaction(txId);
+    // Transaction submit (from Add Expense Screen)
+    document.addEventListener('transactionSubmit', (e) => {
+      const { type, category, amount, date, note, isEdit } = e.detail;
+
+      if (isEdit && this.addExpenseScreen.editingTransaction) {
+        // Update existing transaction
+        const idx = this.transactions.findIndex(t => t.id === this.addExpenseScreen.editingTransaction.id);
+        if (idx > -1) {
+          this.transactions[idx] = new Transaction(type, category, amount, date, note, this.addExpenseScreen.editingTransaction.id);
+        }
+        this.addExpenseScreen.clearEditMode();
+      } else {
+        // Add new transaction
+        const tx = new Transaction(type, category, amount, date, note);
+        this.transactions.push(tx);
+      }
+
+      // Save and refresh
+      this.storage.saveTransactions(this.transactions);
+      this.renderAll();
+    });
+
+    // Edit transaction (from dashboard)
+    document.addEventListener('editTransaction', (e) => {
+      const { transactionId } = e.detail;
+      const tx = this.transactions.find(t => t.id === transactionId);
+      if (tx) {
+        this.addExpenseScreen.setEditMode(tx);
+        this.ui.showScreen('add-expense');
+      }
+    });
+
+    // Delete transaction (from dashboard)
+    document.addEventListener('deleteTransaction', (e) => {
+      const { transactionId } = e.detail;
+      if (confirm('Delete this transaction?')) {
+        this.transactions = this.transactions.filter(t => t.id !== transactionId);
+        this.storage.saveTransactions(this.transactions);
+        this.renderAll();
+        this.ui.showToast('Transaction deleted ✅', 'success');
       }
     });
   }
 
-  /**
-   * Refresh all screens (called after transaction added/edited)
-   */
-  refreshAllScreens() {
-    for (const screen of Object.values(this.screens)) {
-      if (screen.onShow) {
-        screen.onShow();
-      }
-    }
+  // Public method to add transaction (can be called from outside)
+  addTransaction(type, category, amount, date, note = '') {
+    const tx = new Transaction(type, category, amount, date, note);
+    this.transactions.push(tx);
+    this.storage.saveTransactions(this.transactions);
+    this.renderAll();
+    return tx;
   }
 
-  /**
-   * Initialize the app
-   */
-  init() {
-    // Render initial screens
-    this.screens.dashboard.onShow();
-    this.screens['add-expense'].onShow();
-    this.screens.analytics.onShow();
-    this.screens.search.onShow();
-    this.screens.settings.onShow();
+  // Public method to get transactions
+  getTransactions() {
+    return this.transactions;
+  }
 
-    // Show dashboard by default
-    this.ui.switchTab('dashboard');
-
-    console.log('✅ Expense Tracker App initialized');
+  // Public method to export transactions
+  exportTransactions(format = 'json') {
+    if (format === 'csv') {
+      return this.storage.exportAsCSV(this.transactions);
+    }
+    return this.storage.exportAsJSON(this.transactions);
   }
 }
 
-// Start app when DOM is ready
+// Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.app = new App();
+  window.app.init();
 });
