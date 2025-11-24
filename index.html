@@ -1,110 +1,95 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Expense Tracker (Lite)</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker - AI-Powered Finance Management</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <header class="container header">
-    <h1>Expense Tracker</h1>
-    <p class="sub">Track income and expenses easily</p>
-  </header>
-
-  <main class="container grid">
-    <section class="card">
-      <h2 class="card-title">Add transaction</h2>
-      <form id="tx-form" class="form">
-        <div class="row">
-          <label for="type">Type</label>
-          <select id="type" name="type">
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-          </select>
-        </div>
-        <div class="row">
-          <label for="category">Category</label>
-          <select id="category" name="category"></select>
-        </div>
-        <div class="row">
-          <label for="amount">Amount</label>
-          <input id="amount" name="amount" type="number" step="0.01" min="0" placeholder="0.00" required />
-        </div>
-        <div class="row">
-          <label for="date">Date</label>
-          <input id="date" name="date" type="date" required />
-        </div>
-        <div class="row">
-          <label for="note">Note (optional)</label>
-          <input id="note" name="note" type="text" placeholder="Short description" />
-        </div>
-        <button class="btn primary" type="submit">Add</button>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2 class="card-title">Summary</h2>
-      <div class="summary">
-        <div class="summary-item">
-          <span class="label">Income</span>
-          <span id="sum-income" class="value positive">$0.00</span>
-        </div>
-        <div class="summary-item">
-          <span class="label">Expense</span>
-          <span id="sum-expense" class="value negative">$0.00</span>
-        </div>
-        <div class="summary-item">
-          <span class="label">Balance</span>
-          <span id="sum-balance" class="value">$0.00</span>
-        </div>
+  <div class="app-container">
+    <!-- Sidebar (Desktop) -->
+    <aside class="sidebar">
+      <div class="logo">
+        <h1>💰 ExpenseTrack</h1>
       </div>
-    </section>
+      <nav class="nav">
+        <button class="nav-btn active" data-tab="dashboard">
+          <span class="icon">📊</span>
+          <span class="label">Dashboard</span>
+        </button>
+        <button class="nav-btn" data-tab="add-expense">
+          <span class="icon">➕</span>
+          <span class="label">Add Transaction</span>
+        </button>
+        <button class="nav-btn" data-tab="analytics">
+          <span class="icon">📈</span>
+          <span class="label">Analytics</span>
+        </button>
+        <button class="nav-btn" data-tab="search">
+          <span class="icon">🔍</span>
+          <span class="label">Search</span>
+        </button>
+        <button class="nav-btn" data-tab="settings">
+          <span class="icon">⚙️</span>
+          <span class="label">Settings</span>
+        </button>
+      </nav>
+    </aside>
 
-    <section class="card span-2">
-      <div class="list-header">
-        <h2 class="card-title">Transactions</h2>
-        <input id="search" class="search" type="search" placeholder="Search note or category" />
-        <button id="export-csv" class="btn" style="margin-left:1rem;">Export CSV</button>
-      </div>
-      <ul id="tx-list" class="tx-list"></ul>
-      <p id="empty" class="empty">No transactions yet. Add your first one!</p>
-    </section>
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Screen -->
+      <section id="screen-dashboard" class="screen" style="display: none;"></section>
 
-    <section class="card span-2">
-      <h2 class="card-title">Insights</h2>
-      <div class="insights-kpis">
-        <div class="kpi">
-          <div class="kpi-label">Transactions (this month)</div>
-          <div id="kpi-count" class="kpi-value">0</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Top expense category</div>
-          <div id="kpi-topcat" class="kpi-value">—</div>
-        </div>
-        <div class="kpi">
-          <div class="kpi-label">Avg expense (this month)</div>
-          <div id="kpi-avg" class="kpi-value">$0.00</div>
-        </div>
-      </div>
-      <div class="charts">
-        <div>
-          <h3 class="chart-title">Expenses by category (this month)</h3>
-          <canvas id="catChart" height="180"></canvas>
-        </div>
-        <div>
-          <h3 class="chart-title">Income vs Expense by month</h3>
-          <canvas id="monthChart" height="180"></canvas>
-        </div>
-      </div>
-    </section>
-  </main>
+      <!-- Add Expense Screen -->
+      <section id="screen-add-expense" class="screen" style="display: none;"></section>
 
-  <footer class="container footer">
-    <small>Data is stored in your browser (localStorage).</small>
-  </footer>
+      <!-- Analytics Screen -->
+      <section id="screen-analytics" class="screen" style="display: none;"></section>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-  <script src="app.js" defer></script>
+      <!-- Search Screen -->
+      <section id="screen-search" class="screen" style="display: none;"></section>
+
+      <!-- Settings Screen -->
+      <section id="screen-settings" class="screen" style="display: none;"></section>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="dashboard">📊</button>
+      <button class="nav-btn" data-tab="add-expense">➕</button>
+      <button class="nav-btn" data-tab="analytics">📈</button>
+      <button class="nav-btn" data-tab="search">🔍</button>
+      <button class="nav-btn" data-tab="settings">⚙️</button>
+    </nav>
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div id="toastContainer"></div>
+
+  <!-- Scripts: Load all modules -->
+  <!-- Core Models -->
+  <script src="js/Transaction.js"></script>
+  <script src="js/Storage.js"></script>
+  <script src="js/BudgetManager.js"></script>
+  <script src="js/AnalyticsEngine.js"></script>
+
+  <!-- UI Management -->
+  <script src="js/UIManager.js"></script>
+
+  <!-- Screen Modules -->
+  <script src="js/DashboardScreen.js"></script>
+  <script src="js/AddExpenseScreen.js"></script>
+  <script src="js/AnalyticsScreen.js"></script>
+  <script src="js/SearchScreen.js"></script>
+  <script src="js/SettingsScreen.js"></script>
+
+  <!-- App Orchestrator -->
+  <script src="js/App.js"></script>
+
+  <!-- Third-party Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </body>
 </html>
